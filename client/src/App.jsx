@@ -24,8 +24,6 @@ function App() {
 
       const res = await API.get("/");
 
-      console.log(res.data);
-
       let taskData = [];
 
       if (Array.isArray(res.data)) {
