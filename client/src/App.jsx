@@ -14,14 +14,34 @@ function App() {
   const [editingTask, setEditingTask] =
     useState(null);
 
+  const [loading, setLoading] =
+    useState(true);
+
   // Fetch Tasks
   const fetchTasks = async () => {
     try {
-      const res = await API.get();
+      setLoading(true);
 
-      setTasks(res.data);
+      const res = await API.get("/");
+
+      console.log(res.data);
+
+      let taskData = [];
+
+      if (Array.isArray(res.data)) {
+        taskData = res.data;
+      } else if (
+        Array.isArray(res.data.tasks)
+      ) {
+        taskData = res.data.tasks;
+      }
+
+      setTasks(taskData);
     } catch (error) {
       console.log(error);
+      setTasks([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,7 +57,11 @@ function App() {
         taskData
       );
 
-      setTasks([res.data, ...tasks]);
+      setTasks((prevTasks) =>
+        Array.isArray(prevTasks)
+          ? [res.data, ...prevTasks]
+          : [res.data]
+      );
     } catch (error) {
       console.log(error);
     }
@@ -48,10 +72,13 @@ function App() {
     try {
       await API.delete(`/${id}`);
 
-      setTasks(
-        tasks.filter(
-          (task) => task._id !== id
-        )
+      setTasks((prevTasks) =>
+        Array.isArray(prevTasks)
+          ? prevTasks.filter(
+              (task) =>
+                task._id !== id
+            )
+          : []
       );
     } catch (error) {
       console.log(error);
@@ -65,12 +92,14 @@ function App() {
         `/${id}/status`
       );
 
-      setTasks(
-        tasks.map((task) =>
-          task._id === id
-            ? res.data
-            : task
-        )
+      setTasks((prevTasks) =>
+        Array.isArray(prevTasks)
+          ? prevTasks.map((task) =>
+              task._id === id
+                ? res.data
+                : task
+            )
+          : []
       );
     } catch (error) {
       console.log(error);
@@ -88,12 +117,14 @@ function App() {
         updatedData
       );
 
-      setTasks(
-        tasks.map((task) =>
-          task._id === id
-            ? res.data
-            : task
-        )
+      setTasks((prevTasks) =>
+        Array.isArray(prevTasks)
+          ? prevTasks.map((task) =>
+              task._id === id
+                ? res.data
+                : task
+            )
+          : []
       );
 
       setEditingTask(null);
@@ -103,17 +134,18 @@ function App() {
   };
 
   // Filter Tasks
-  const filteredTasks = tasks.filter(
-    (task) => {
-      if (filter === "completed")
-        return task.completed;
+  const filteredTasks =
+    Array.isArray(tasks)
+      ? tasks.filter((task) => {
+          if (filter === "completed")
+            return task.completed;
 
-      if (filter === "pending")
-        return !task.completed;
+          if (filter === "pending")
+            return !task.completed;
 
-      return true;
-    }
-  );
+          return true;
+        })
+      : [];
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -134,17 +166,29 @@ function App() {
         />
 
         <div className="grid gap-4">
-          {filteredTasks.map((task) => (
-            <TaskCard
-              key={task._id}
-              task={task}
-              deleteTask={deleteTask}
-              toggleStatus={toggleStatus}
-              setEditingTask={
-                setEditingTask
-              }
-            />
-          ))}
+          {loading ? (
+            <p className="text-center text-lg font-semibold text-blue-500">
+              Loading tasks...
+            </p>
+          ) : filteredTasks.length > 0 ? (
+            filteredTasks.map((task) => (
+              <TaskCard
+                key={task._id}
+                task={task}
+                deleteTask={deleteTask}
+                toggleStatus={
+                  toggleStatus
+                }
+                setEditingTask={
+                  setEditingTask
+                }
+              />
+            ))
+          ) : (
+            <p className="text-center text-gray-500">
+              No tasks found
+            </p>
+          )}
         </div>
       </div>
     </div>
